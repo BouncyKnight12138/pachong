@@ -1,6 +1,10 @@
-
-
+# -*- coding: UTF-8 -*-
+from spider import *
 
 
 if __name__ == '__main__':
-    pass
+    spider = Spider(122471)
+    print('Hello world!')
+    spider.get_index()
+    spider.get_cont()
+    print('Bye world!')
