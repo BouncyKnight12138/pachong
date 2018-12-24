@@ -3,8 +3,8 @@ from spider import *
 
 
 if __name__ == '__main__':
-    spider = Spider(input('BOOK ID: '))
     print('Hello world!')
+    spider = Spider(input('BOOK ID: '))
     spider.get_index()
     spider.get_cont()
     print('Bye world!')

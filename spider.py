@@ -81,8 +81,9 @@ class Spider(object):
                         #很重要，清洗\u3000\xa0等
                         text = "\n".join(text.split())
                         #保存该章
-                        file.saveFile(self.name, '%s_%s'%(i, self.do_index_name[i]), '%s_%s'%(j, self.do_index_cont_name[i][j]), text)
-                        print('%s 已保存'%self.do_index_cont_name[i][j])
+                        file.saveFile(self.name, '%s_%s'%(str(i).zfill(2), self.do_index_name[i]), \
+                        '%s_%s'%(str(j).zfill(5), self.do_index_cont_name[i][j]), text)
+                        print('已保存  %s'%self.do_index_cont_name[i][j])
                         break
                     except Exception as e:
                         print(e)
