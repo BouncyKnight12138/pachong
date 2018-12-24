@@ -3,7 +3,7 @@ from spider import *
 
 
 if __name__ == '__main__':
-    spider = Spider(122471)
+    spider = Spider(input('BOOK ID: '))
     print('Hello world!')
     spider.get_index()
     spider.get_cont()
