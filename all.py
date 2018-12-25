@@ -1,6 +1,4 @@
 # -*- coding: UTF-8 -*-
-import time
-import random
 from spider import *
 from search import *
 import file
