@@ -16,7 +16,24 @@ def saveFile(name0, name1, name2, content):
         os.makedirs("./book/%s/%s"%(name0, name1))
     with open("./book/%s/%s/%s.txt"%(name0, name1, name2), "w", encoding="utf-8") as f:
         f.write(content)
-        
+
+def saveIndex(name0, name1, content):
+    '''保存索引'''
+    name0 = re.sub(r'[\/:*?"<>|]', '', name0)
+    content = str(content)
+    if os.path.exists("./book/%s"%name0) == False:
+        os.makedirs("./book/%s"%name0)
+    with open("./book/%s/%s.txt"%(name0, name1), "w", encoding="utf-8") as f:
+        f.write(content)
+
+def addBookList(content):
+    content = str(content)
+    if os.path.exists('./bookList.txt') == False:
+        with open('./bookList.txt', 'w', encoding='utf-8') as f:
+            f.write('%s\n'%content)
+    else:
+        with open('./bookList.txt', 'a', encoding='utf-8') as f:
+            f.write('%s\n'%content)
 
 if __name__ == '__main__':
     pass

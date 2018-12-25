@@ -53,12 +53,15 @@ class Spider(object):
                     # 子节点为章
                     try:
                         self.index_cont_name[-1].append(item.xpath('./a/text()')[0])
-                        self.index_cont_id[-1].append(item.xpath('./a/@href')[0][:-5])
+                        self.index_cont_id[-1].append(item.xpath('./a/@href')[0].split('/')[-1][:-5])
                     except:
                         # 最新章节卷下章会抛出异常，无妨
                         continue
             print('Index分析完成, %s卷 , %s章'%(len(self.index_name), len(html_list)-len(self.index_name)))
-            time.sleep(1)
+            file.saveIndex(self.name, 'index_name', self.index_name)
+            file.saveIndex(self.name, 'index_cont_id', self.index_cont_id)
+            file.saveIndex(self.name, 'index_cont_name', self.index_cont_name)
+            time.sleep(random.randint(1, 3))
         except Exception as e:
             print(e)
             return self.retry()
@@ -91,7 +94,7 @@ class Spider(object):
                         print(e)
                         try_count += 1
                         time.sleep(random.randint(30, 60))
-                time.sleep(random.randint(3, 5))
+                time.sleep(random.randint(1, 3))
 
 if __name__ == '__main__':
     pass
