@@ -58,9 +58,9 @@ class Spider(object):
                         # 最新章节卷下章会抛出异常，无妨
                         continue
             print('Index分析完成, %s卷 , %s章'%(len(self.index_name), len(html_list)-len(self.index_name)))
-            file.saveIndex(self.name, 'index_name', self.index_name)
-            file.saveIndex(self.name, 'index_cont_id', self.index_cont_id)
-            file.saveIndex(self.name, 'index_cont_name', self.index_cont_name)
+            file.saveIndex('%s_%s'%(str(self.id).zfill(7), self.name), 'index_name', self.index_name)
+            file.saveIndex('%s_%s'%(str(self.id).zfill(7), self.name), 'index_cont_id', self.index_cont_id)
+            file.saveIndex('%s_%s'%(str(self.id).zfill(7), self.name), 'index_cont_name', self.index_cont_name)
             time.sleep(random.randint(1, 3))
         except Exception as e:
             print(e)
@@ -86,7 +86,7 @@ class Spider(object):
                         # 很重要，清洗\u3000\xa0等
                         text = "\n".join(text.split())
                         # 保存该章
-                        file.saveFile(self.name, '%s_%s'%(str(i).zfill(2), self.do_index_name[i]), \
+                        file.saveFile('%s_%s'%(str(self.id).zfill(7), self.name), '%s_%s'%(str(i).zfill(2), self.do_index_name[i]), \
                         '%s_%s'%(str(j).zfill(5), self.do_index_cont_name[i][j]), text)
                         print('已保存  %s'%self.do_index_cont_name[i][j])
                         break
