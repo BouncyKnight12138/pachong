@@ -1,10 +1,30 @@
 # -*- coding: UTF-8 -*-
-import os, re
+#!/usr/bin/python3
+import datetime
+import re
+import os
+from ast import literal_eval
+from db import *
 
 def check(bookId, indexName1, indexName2, indexId):
     #To Do:本地历史比对
     return((indexName1, indexName2,indexId))
-    
+
+def getLocalIndex(bookID, bookName):
+    '''读取本地的index文件'''
+    bookName = re.sub(r'[\/:*?"<>|]', '', bookName)
+    path='./book/%s_%s'%(str(bookID).zfill(7), bookName)
+    if os.path.isdir(path):
+        with open('%s/index_cont_id.txt'%path, "r", encoding="utf-8") as f:
+            index_cont_id = eval(f.read())
+        with open('%s/index_cont_name.txt'%path, "r", encoding="utf-8") as f:
+            index_cont_name = eval(f.read())
+        with open('%s/index_name.txt'%path, "r", encoding="utf-8") as f:
+            index_name = eval(f.read())
+        return((index_name, index_cont_name, index_cont_id))
+    else:
+        return(1)
+
 def saveFile(name0, name1, name2, content):
     '''书名， 卷名，章名，内容'''
     #清洗文件名
@@ -27,6 +47,7 @@ def saveIndex(name0, name1, content):
         f.write(content)
 
 def addBookList(content):
+    '''将小说信息添加到bookList.txt文件'''
     content = str(content)
     if os.path.exists('./bookList.txt') == False:
         with open('./bookList.txt', 'w', encoding='utf-8') as f:
@@ -34,6 +55,103 @@ def addBookList(content):
     else:
         with open('./bookList.txt', 'a', encoding='utf-8') as f:
             f.write('%s\n'%content)
+            
 
+#peewee取代本地bookList文件
+
+class Book(Model):
+    id = IntegerField(primary_key=True)
+    category = CharField(max_length=12)
+    name = CharField(max_length=120)
+    author = CharField(max_length=120)
+    status = CharField(max_length=6)
+    local = BooleanField()
+    chapterNumber = IntegerField()
+    description = TextField()
+    lastChapterId = IntegerField()
+    lastChapterName= CharField(max_length=120)
+    lastChapterTime = DateField()
+    class Meta:
+        database = db
+
+def createTable():
+    '''创建Book表'''
+    db.connect()
+    try:
+        db.create_tables([Book])
+        db.close()
+    except:
+        #可能是表已存在
+        db.close()
+        return(1)
+
+def addItemDB(item): 
+    '''将小说信息添加到数据库'''
+    #item: [id, category, name, author, status, description, lastChapterId, lastChapterName, lastChapterTime, chapterNumber]
+    try:
+        db.connect()
+        id, category, name, author, status, description, lastChapterId, lastChapterName, lastChapterTime, chapterNumber = item
+        try:
+            #若已存在则更新
+            book = Book.get(Book.id == int(id))
+            book.category, book.name, book.author, book.description = (category, name, author, description)
+            book.status, book.lastChapterId, book.lastChapterName, book.lastChapterTime, book.chapterNumber = (
+            status, lastChapterId, lastChapterName, lastChapterTime, chapterNumber)
+            book.save()
+        except:
+            #若不存在则新建
+            book.create(id=id, category=category, name=name, author=author, status=status, description=description, 
+                        lastChapterId=lastChapterId, lastChapterName=lastChapterName, lastChapterTime=lastChapterTime, 
+                        local=False, chapterNumber=chapterNumber)
+        db.close()
+    except Exception as e:
+        db.close()
+        raise(e)
+
+def idSearch(id):
+    '''根据ID返回小说信息'''
+    db.connect()
+    try:
+        item = Book.get(Book.id == int(id))
+        db.close()
+        return([item.id, item.category, item.name, item.author, item.status, item.local, item.chapterNumber, 
+                item.description, item.lastChapterId, item.lastChapterName, item.lastChapterTime])
+    except Exception as e:
+        db.close()
+        raise(e)
+
+def fileToDatabase():
+    '''将写入数据库失败的数据重新写入'''
+    with open('./bookList.txt', encoding= 'utf-8') as f:
+        for line in f.readlines():
+            try:
+                item = eval(line.strip())
+                addItemDB(item)
+                print(item)
+            except Exception as e:
+                print('ERR or END：%s'%e)
+
+def completeLocal(id):
+    '''更新数据库中状态为缓存完成'''
+    db.connect()
+    obj = Book.get(Book.id == id)
+    obj.local = True
+    obj.save()
+    db.close()
+    
 if __name__ == '__main__':
-    pass
+    print('Hello world')
+    db.connect()
+    for item in Book.select().where(Book.chapterNumber == -1):
+        count = 0
+        index_name, index_cont_name, index_cont_id = getLocalIndex(item.id, item.name)
+        for i in range(0, len(index_name)):
+            count += len(index_cont_id[i])
+        if count > 0:
+            item.chapterNumber = count
+            item.save()
+            print(item.id, item.name, item.chapterNumber)
+    db.close()
+    print('Bye world')
+
+        
