@@ -145,7 +145,7 @@ class Spider(object):
         if self.index == False:
             raise(RuntimeError('Index Not Found'))
         (self.do_index_name, self.do_index_cont_name, self.do_index_cont_id) = file.check(
-         self.id, self.index_name, self.index_cont_name, self.index_cont_id)
+         self.id, self.name, self.index_name, self.index_cont_name, self.index_cont_id)
         print('Index本地比对完成,开始抓取章内容')
         # 开始抓取吧
         # 生成待抓取池
