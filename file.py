@@ -5,15 +5,49 @@ import re
 import os
 from ast import literal_eval
 from db import *
+from copy import deepcopy
 
-def check(bookId, indexName1, indexName2, indexId):
-    #To Do:本地历史比对
-    return((indexName1, indexName2,indexId))
+def addLog(name, content):
+    '''生成本地log文件'''
+    content = str(content)
+    if os.path.exists('./%s.txt'%name) == False:
+        with open('./%s.txt'%name, 'w', encoding='utf-8') as f:
+            f.write('%s\n'%content)
+    else:
+        with open('./%s.txt'%name, 'a', encoding='utf-8') as f:
+            f.write('%s\n'%content)
 
-def getLocalIndex(bookID, bookName):
+def check(bookId, bookName, index_name, index_cont_name, index_cont_id):
+    '''本地文件校验，返回未缓存的章节列表'''
+    bindex_name, bindex_cont_name, bindex_cont_id = (
+    deepcopy(index_name), deepcopy(index_cont_name), deepcopy(index_cont_id))
+    try:
+        bookName = re.sub(r'[\/:*?"<>|]', '', bookName)
+        path='./book/%s_%s'%(str(bookId).zfill(7), bookName)
+        if os.path.isdir(path):
+            dir_one = os.listdir(path)
+            dir_one.remove('index_name.txt')
+            dir_one.remove('index_cont_name.txt')
+            dir_one.remove('index_cont_id.txt')
+            dir_one.sort()
+            for i in range(0, len(dir_one)):
+                dir_two = os.listdir(os.path.join(path, dir_one[i]))
+                dir_two.sort()
+                dir_two.reverse()
+                for item in dir_two:
+                    index_cont_name[i].pop(int(item[:5]))
+                    index_cont_id[i].pop(int(item[:5]))
+    except:
+        #本地文件校验失败，清除已缓存内容
+        os.system('rm -rf %s'%path)
+        return((bindex_name, bindex_cont_name, bindex_cont_id))
+    else:
+        return((index_name, index_cont_name, index_cont_id))
+
+def getLocalIndex(bookId, bookName):
     '''读取本地的index文件'''
     bookName = re.sub(r'[\/:*?"<>|]', '', bookName)
-    path='./book/%s_%s'%(str(bookID).zfill(7), bookName)
+    path='./book/%s_%s'%(str(bookId).zfill(7), bookName)
     if os.path.isdir(path):
         with open('%s/index_cont_id.txt'%path, "r", encoding="utf-8") as f:
             index_cont_id = eval(f.read())
@@ -141,17 +175,6 @@ def completeLocal(id):
     
 if __name__ == '__main__':
     print('Hello world')
-    db.connect()
-    for item in Book.select().where(Book.chapterNumber == -1):
-        count = 0
-        index_name, index_cont_name, index_cont_id = getLocalIndex(item.id, item.name)
-        for i in range(0, len(index_name)):
-            count += len(index_cont_id[i])
-        if count > 0:
-            item.chapterNumber = count
-            item.save()
-            print(item.id, item.name, item.chapterNumber)
-    db.close()
     print('Bye world')
 
         
