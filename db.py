@@ -2,6 +2,7 @@
 #!/usr/bin/python3
 from peewee import *
 
+#数据库配置文件
 db = MySQLDatabase(
      'test', 
      user = 'test', 
