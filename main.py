@@ -1,18 +1,9 @@
 # -*- coding: UTF-8 -*-
+#!/usr/bin/python3
 from spider import *
 from file import *
 import threading
 
-
-def addBPOLL(content):
-    # TODO: 添加文件名参数传入，移到file去
-    content = str(content)
-    if os.path.exists('./BPOLL.txt') == False:
-        with open('./BPOLL.txt', 'w', encoding='utf-8') as f:
-            f.write('%s\n'%content)
-    else:
-        with open('./BPOLL.txt', 'a', encoding='utf-8') as f:
-            f.write('%s\n'%content)
 
 def updateDatabasePool(timeDelta):
     '''生成timedelta(日)前的小说idPool'''
@@ -46,13 +37,13 @@ def getIndex(pool, threadNum=16):
                 spider = Spider(bookId)
                 try:
                     spider.get_index()
+                except AttributeError:
+                    print('INVALID ID : %s'%bookId)
+                    continue
                 except Exception as e:
                     print('ERR %s_%s'%(bookId, e))
-                    pool.append(bookId)  # 该操作存在死循环风险，仅限于ID确认存在情况，否则使用下方except
+                    pool.append(bookId)
                     continue
-                #except:
-                #    addBPOLL(bookId)
-                #    continue
                 else:
                     if spider.index:
                         item = [spider.id, spider.category, spider.name, spider.author, spider.status, spider.description, 
@@ -65,7 +56,7 @@ def getIndex(pool, threadNum=16):
                         dbLock.release()
                         print('%s Thread%s done %s_%s'%(time.ctime(time.time()), self.id, bookId, len(pool)))
                     else:
-                        addBPOLL(bookId)
+                        addLog(Bpoll, bookId)
     
     for i in range(0,threadNum):
         locals()['Thread_%s'%i] = SpiderThread(i)
@@ -100,11 +91,11 @@ class Download_book(threading.Thread):
                     completeLocal(item)
                     print('Done %s_%s'%(len(doList), item))
                     #time.sleep(2)
-            except:
+            except Execption as e:
                 pool_lock.acquire()
                 doList.append(item)
                 pool_lock.release()
-                print('Get Index Err %s'%item)
+                print('Get Index Err %s, %s'%(item, e))
                 time.sleep(10)
 
 if __name__ == '__main__':
@@ -114,7 +105,7 @@ if __name__ == '__main__':
     pageThreadNumber = 8
     doList = []
     db.connect()
-    for book in Book.select().where(Book.chapterNumber>0).where(Book.chapterNumber<100).where(Book.local==False).order_by(Book.chapterNumber):
+    for book in Book.select().where(Book.chapterNumber>0).where(Book.local==False).order_by(Book.chapterNumber):
        doList.append(book.id)
     db.close()
     print(len(doList))
