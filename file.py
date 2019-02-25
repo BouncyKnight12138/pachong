@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import datetime
 import re
 import os
@@ -31,17 +31,43 @@ def check(bookId, bookName, index_name, index_cont_name, index_cont_id):
             dir_one.remove('index_cont_id.txt')
             dir_one.sort()
             for i in range(0, len(dir_one)):
-                dir_two = os.listdir(os.path.join(path, dir_one[i]))
-                dir_two.sort()
-                dir_two.reverse()
-                for item in dir_two:
-                    index_cont_name[i].pop(int(item[:5]))
-                    index_cont_id[i].pop(int(item[:5]))
+                if os.path.isdir(os.path.join(path, dir_one[i])):
+                    dir_two = os.listdir(os.path.join(path, dir_one[i]))
+                    dir_two.sort()
+                    dir_two.reverse()
+                    for item in dir_two:
+                        index_cont_name[i].pop(int(item[:5]))
+                        index_cont_id[i].pop(int(item[:5]))
     except:
-        #本地文件校验失败，清除已缓存内容
-        os.system('rm -rf %s'%path)
+        # 本地文件校验出错，清除已缓存内容
+        print('%s_%s Local Cache is Broken.'%(bookId, bookName))
+        os.system('rm -rf %s/0*'%path)
+        # 取消数据库中local标记
+        try:
+            db.connect()
+            obj = Book.get(Book.id == bookId)
+            obj.local = False
+            obj.save()
+            db.close()
+        except Exception as e:
+            db.close()
+            print(e)
+            time.sleep(3)
         return((bindex_name, bindex_cont_name, bindex_cont_id))
     else:
+        #检验本地文件是否完整，重置local状态
+        for i in range(0,len(index_name)):
+            if index_cont_id[i] != []:
+                print('%s_%s Local Cache Incomplete.'%(bookId, bookName))
+                try:
+                    db.connect()
+                    obj = Book.get(Book.id == bookId)
+                    obj.local = False
+                    obj.save()
+                    db.close()
+                except:
+                    db.close()
+                break
         return((index_name, index_cont_name, index_cont_id))
 
 def getLocalIndex(bookId, bookName):
@@ -61,11 +87,11 @@ def getLocalIndex(bookId, bookName):
 
 def saveFile(name0, name1, name2, content):
     '''书名， 卷名，章名，内容'''
-    #清洗文件名
+    # 清洗文件名
     name0 = re.sub(r'[\/:*?"<>|]', '', name0)
     name1 = re.sub(r'[\/:*?"<>|]', '', name1)
     name2 = re.sub(r'[\/:*?"<>|]', '', name2)
-    #确认路径
+    # 确认路径
     if os.path.exists("./book/%s/%s"%(name0, name1)) == False:
         os.makedirs("./book/%s/%s"%(name0, name1))
     with open("./book/%s/%s/%s.txt"%(name0, name1, name2), "w", encoding="utf-8") as f:
@@ -91,7 +117,7 @@ def addBookList(content):
             f.write('%s\n'%content)
             
 
-#peewee取代本地bookList文件
+# peewee取代本地bookList文件
 
 class Book(Model):
     id = IntegerField(primary_key=True)
@@ -110,30 +136,30 @@ class Book(Model):
 
 def createTable():
     '''创建Book表'''
-    db.connect()
     try:
+        db.connect()
         db.create_tables([Book])
         db.close()
-    except:
-        #可能是表已存在
+    except Exception as e:
         db.close()
-        return(1)
+        raise(e)
 
 def addItemDB(item): 
     '''将小说信息添加到数据库'''
-    #item: [id, category, name, author, status, description, lastChapterId, lastChapterName, lastChapterTime, chapterNumber]
+    # item: [id, category, name, author, status, description, lastChapterId, lastChapterName, lastChapterTime, chapterNumber]
     try:
         db.connect()
         id, category, name, author, status, description, lastChapterId, lastChapterName, lastChapterTime, chapterNumber = item
         try:
-            #若已存在则更新
+            # 若已存在则更新
             book = Book.get(Book.id == int(id))
             book.category, book.name, book.author, book.description = (category, name, author, description)
             book.status, book.lastChapterId, book.lastChapterName, book.lastChapterTime, book.chapterNumber = (
             status, lastChapterId, lastChapterName, lastChapterTime, chapterNumber)
+            book.local = False
             book.save()
         except:
-            #若不存在则新建
+            # 若不存在则新建
             book.create(id=id, category=category, name=name, author=author, status=status, description=description, 
                         lastChapterId=lastChapterId, lastChapterName=lastChapterName, lastChapterTime=lastChapterTime, 
                         local=False, chapterNumber=chapterNumber)
@@ -172,9 +198,20 @@ def completeLocal(id):
     obj.local = True
     obj.save()
     db.close()
-    
+
+
 if __name__ == '__main__':
     print('Hello world')
+    pool = []
+    db.connect()
+    for book in Book.select():
+       pool.append((book.id, book.name))
+    db.close()
+    for item in pool:
+        id, name = item
+        index_name, index_cont_name, index_cont_id = getLocalIndex(id, name)
+        check(id, name, index_name, index_cont_name, index_cont_id)
+        print('  DONE %s_%s '%(id,name))
     print('Bye world')
 
         
