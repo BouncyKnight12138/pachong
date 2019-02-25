@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import datetime
 import random
 import time
@@ -56,9 +56,9 @@ class Spider(object):
             self.status = html.xpath('//meta[@property="og:novel:status"]/@content')[0]
             self.lastChapterTime = html.xpath('//meta[@property="og:novel:update_time"]/@content')[0].split(' ')[0]
             try:
-                self.lastChapterTime = datetime.datetime.strptime(self.lastChapterTime, "%m/%d/%Y")
+                self.lastChapterTime = datetime.datetime.strptime(self.lastChapterTime, "%m/%d/%Y").date()
             except:
-                self.lastChapterTime = datetime.datetime(2017, 4, 29)
+                self.lastChapterTime = datetime.date(2017, 4, 29)
             self.lastChapterName = html.xpath('//meta[@property="og:novel:latest_chapter_name"]/@content')[0]
             self.lastChapterId = html.xpath('//meta[@property="og:novel:latest_chapter_url"]/@content')[0].split('/')[-1][:-5]
             self.description = html.xpath('//meta[@property="og:description"]/@content')[0]
