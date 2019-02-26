@@ -160,7 +160,7 @@ def addItemDB(item):
             book.save()
         except:
             # 若不存在则新建
-            book.create(id=id, category=category, name=name, author=author, status=status, description=description, 
+            Book.create(id=id, category=category, name=name, author=author, status=status, description=description, 
                         lastChapterId=lastChapterId, lastChapterName=lastChapterName, lastChapterTime=lastChapterTime, 
                         local=False, chapterNumber=chapterNumber)
         db.close()
