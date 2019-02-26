@@ -64,6 +64,57 @@ def updateNovel(timeDelta=7, threadNum=128):
     for i in range(0,threadNum):
         locals()['Thread_%s'%i].join()
 
+def rebuildIndex(end=160000, threadNum=128):
+    '''重建未收录于数据库的Index'''
+    print('init book list.')
+    pool = []
+    for i in range(1,end):
+        pool.append(i)
+    db.connect()
+    for book in Book.select():
+        pool.remove(book.id)
+    db.close()
+    print('待抓取Index数: %s'%len(pool))
+    input('Press ENTER to continue.')
+    poolLock = threading.Lock()
+    dbLock = threading.Lock()
+    print('init threads.')
+    
+    class SpiderThread(threading.Thread):
+        def __init__(self, tid):
+            threading.Thread.__init__(self)
+            self.id = tid
+            
+        def run(self):
+            nonlocal pool, poolLock, dbLock
+            while pool != []:
+                with poolLock:
+                    bookId = pool.pop(0)
+                spider = Spider(bookId)
+                try:
+                    spider.get_index()
+                except AttributeError:
+                    print('INVALID ID : %s'%bookId)
+                except Exception as e:
+                    print('ERR %s_%s'%(bookId, e))
+                    pool.append(bookId)
+                else:
+                    item = [spider.id, spider.category, spider.name, spider.author, spider.status, spider.description, 
+                            spider.lastChapterId, spider.lastChapterName, spider.lastChapterTime, spider.index_count]
+                    with dbLock:
+                        try:
+                            addItemDB(item)
+                        except:
+                            addBookList(item)
+    
+    for i in range(0,threadNum):
+        locals()['Thread_%s'%i] = SpiderThread(i)
+    print('start threads.')
+    for i in range(0,threadNum):
+        locals()['Thread_%s'%i].start()
+    for i in range(0,threadNum):
+        locals()['Thread_%s'%i].join()
+        
 def downloadAll(thread_number=8, pageThreadNumber=16):
     '''下载所有local标记为false的小说'''
     print('init db list')
@@ -116,5 +167,5 @@ def downloadAll(thread_number=8, pageThreadNumber=16):
                 
 if __name__ == '__main__':
     print('Hello world!')
-    updateNovel(14)
+    rebuildIndex()
     print('Bye world!')
