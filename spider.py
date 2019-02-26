@@ -35,10 +35,6 @@ class Spider(object):
         self.do_index_cont_name = []  # 待抓取章名列表，列表
         self.do_index_cont_id = []  # 待抓取章id
 
-    def retry(self):
-        '''请求失败处理'''
-        pass
-
     def get_index(self, proxy=False):
         '''获取小说目录列表'''
         # 抓取index页
