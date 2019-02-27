@@ -2,6 +2,7 @@
 #!/usr/bin/env python3
 import datetime
 import random
+import re
 import time
 import threading
 import requests
@@ -49,6 +50,7 @@ class Spider(object):
             self.author = html.xpath('//meta[@property="og:novel:author"]/@content')[0]
             self.category = html.xpath('//meta[@property="og:novel:category"]/@content')[0]
             self.name = html.xpath('//meta[@property="og:novel:book_name"]/@content')[0]
+            self.name = re.sub(r'[《》]', '' , self.name)
             self.status = html.xpath('//meta[@property="og:novel:status"]/@content')[0]
             self.lastChapterTime = html.xpath('//meta[@property="og:novel:update_time"]/@content')[0].split(' ')[0]
             try:
@@ -58,11 +60,7 @@ class Spider(object):
             self.lastChapterName = html.xpath('//meta[@property="og:novel:latest_chapter_name"]/@content')[0]
             self.lastChapterId = html.xpath('//meta[@property="og:novel:latest_chapter_url"]/@content')[0].split('/')[-1][:-5]
             self.description = html.xpath('//meta[@property="og:description"]/@content')[0]
-            self.description = self.description.replace('<br>','')
-            self.description = self.description.replace('<br/>','')
-            self.description = self.description.replace('</br>','')
-            self.description = self.description.replace('<br\>','')
-            self.description = self.description.replace('\br','')
+            self.description = re.sub(r'[</\\]{,2}br[/\\>]{,2}','', self.description)
             self.description = "\n".join(self.description.split())
             # 建立卷章列表
             html_list = html.xpath('//div[@class="box_con"]/div/dl/*')
@@ -74,7 +72,8 @@ class Spider(object):
                         pass
                     else:
                         # 创建改卷列表
-                        self.index_name.append(item.xpath('./text()')[0])
+                        chapter_name = re.sub('《[\s\S]*》', '', item.xpath('./text()')[0])
+                        self.index_name.append(chapter_name)
                         self.index_cont_name.append([])
                         self.index_cont_id.append([])
                 else:
@@ -85,12 +84,11 @@ class Spider(object):
                     except:
                         # 最新章节卷下章会抛出异常，无妨
                         continue
-            print('ID %s , %s, NAME %s , Index分析完成, %s卷 , %s章'%(self.id, self.lastChapterTime, self.name, 
+            print('ID %s , %s, NAME %s , Index分析完成, %s卷 , %s章'%(self.id, self.lastChapterTime, self.name,
                                                                       len(self.index_name), len(html_list)-len(self.index_name)))
             #将index保存至本地
-            file.saveIndex('%s_%s'%(str(self.id).zfill(7), self.name), 'index_name', self.index_name)
-            file.saveIndex('%s_%s'%(str(self.id).zfill(7), self.name), 'index_cont_id', self.index_cont_id)
-            file.saveIndex('%s_%s'%(str(self.id).zfill(7), self.name), 'index_cont_name', self.index_cont_name)
+            file.saveIndex(self.id, self.name,
+                           self.index_name, self.index_cont_name, self.index_cont_id)
             self.index = True
             #尝试解析index数据
             try:
@@ -149,25 +147,26 @@ class Spider(object):
         pool_lock = threading.Lock()
         for i in range(0, len(self.do_index_name)):
             for j in range(0, len(self.do_index_cont_name[i])):
-                pool.append([self.id, self.do_index_cont_id[i][j], 
+                pool.append([self.id, self.do_index_cont_id[i][j],
                              '%s_%s'%(str(self.id).zfill(7), self.name),
-                             '%s_%s'%(str(i).zfill(2), self.do_index_name[i]), 
+                             '%s_%s'%(str(i).zfill(2), self.do_index_name[i]),
                              '%s_%s'%(str(j).zfill(5), self.do_index_cont_name[i][j])])
-        
+
         class ContSpider(threading.Thread):
             def __init__(self, tid):
                 threading.Thread.__init__(self)
                 self.id = tid
                 self.headers = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36"), 'Connection':'close'}
                 self.proxies = {'http': 'socks5://127.0.0.1:1080', 'https': 'socks5://127.0.0.1:1080'}
-            
+
             def run(self):
                 nonlocal pool, pool_lock
                 while pool != []:
                     try:
-                        pool_lock.acquire()
-                        item = pool.pop(0)
-                        pool_lock.release()
+                        with pool_lock:
+                            if pool == []:
+                                break
+                            item = pool.pop(0)
                         #response = requests.get("https://www.qu.la/book/%s/%s.html"%(item[0], item[1]), headers=self.headers, proxies=self.proxies, timeout=3)
                         response = requests.get("https://www.qu.la/book/%s/%s.html"%(item[0], item[1]), headers=self.headers, timeout=4)
                         html = etree.HTML(response.content.decode())
@@ -179,24 +178,24 @@ class Spider(object):
                         file.saveFile(item[2], item[3], item[4], text)
                         print('已保存  %s_%s'%(len(pool), item))
                     except AttributeError:
-                        #返回的是空页面，笔趣阁问题？
+                        # 返回的是空页面，笔趣阁问题？
                         print('PAGE Thread_%s ERR: EMPTY PAGE, PASS '%self.id)
                     except Exception as e:
-                        pool_lock.acquire()
-                        item = pool.append(item)
-                        pool_lock.release()
+                        with pool_lock:
+                            item = pool.append(item)
                         print('PAGE Thread_%s : %s'%(self.id, e))
-                        #time.sleep(30)
-        
+
         for i in range(0,thread_number):
             locals()['Thread_%s'%i] = ContSpider(i)
         print('start threads.')
         for i in range(0,thread_number):
             locals()['Thread_%s'%i].start()
         for i in range(0,thread_number):
-            locals()['Thread_%s'%i].join()     
+            locals()['Thread_%s'%i].join()
 
+        # 按理说上面整个函数都该重写，但是先接上一段续一续
+        file.transfer(self.id, self.name)
 
 if __name__ == '__main__':
     pass
-    
+
