@@ -133,7 +133,7 @@ class Spider(object):
         except Exception as e:
             raise(e)
 
-    def get_cont(self, thread_number):
+    def get_cont(self, thread_number=8):
         '''抓取章节内容'''
         # 确认要抓取的章列表
         if self.index == False:
@@ -147,10 +147,13 @@ class Spider(object):
         pool_lock = threading.Lock()
         for i in range(0, len(self.do_index_name)):
             for j in range(0, len(self.do_index_cont_name[i])):
+                content_id = self.index_cont_id[i].index(self.do_index_cont_id[i][j])
                 pool.append([self.id, self.do_index_cont_id[i][j],
                              '%s_%s'%(str(self.id).zfill(7), self.name),
-                             '%s_%s'%(str(i).zfill(2), self.do_index_name[i]),
-                             '%s_%s'%(str(j).zfill(5), self.do_index_cont_name[i][j])])
+                             '%s_%s'%(str(i).zfill(2),
+                                      self.do_index_name[i]),
+                             '%s_%s'%(str(content_id).zfill(5),
+                                      self.do_index_cont_name[i][j])])
 
         class ContSpider(threading.Thread):
             def __init__(self, tid):
