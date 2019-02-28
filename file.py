@@ -22,6 +22,8 @@ def addLog(name, content):
 
 def check(bookId, bookName, index_name, index_cont_name, index_cont_id):
     '''本地文件校验，返回未缓存的章节列表'''
+    index_name, index_cont_name, index_cont_id = (
+    deepcopy(index_name), deepcopy(index_cont_name), deepcopy(index_cont_id))
     bindex_name, bindex_cont_name, bindex_cont_id = (
     deepcopy(index_name), deepcopy(index_cont_name), deepcopy(index_cont_id))
     try:
@@ -123,6 +125,8 @@ def saveIndex(id, name, index_name, index_cont_name, index_cont_id):
     index['index_cont_name'] = index_cont_name
     index['index_cont_id'] = index_cont_id
     book_path = './book/%s_%s'%(str(id).zfill(7), re.sub(r'[\/:*?"<>|]', '', name))
+    if os.path.exists(book_path) == False:
+        os.makedirs(book_path)
     with gzip.open('%s/index.json.gz'%book_path, 'wt', encoding='utf-8', compresslevel=9) as f:
         json.dump(index, f, ensure_ascii=False)
 
